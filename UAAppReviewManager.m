@@ -812,7 +812,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 													   delegate:self
 											  cancelButtonTitle:self.cancelButtonTitle
 											  otherButtonTitles:self.remindButtonTitle, self.rateButtonTitle, nil];
-    alertView.cancelButtonIndex = -1;
+    alertView.cancelButtonIndex = 0;
 	self.ratingAlert = alertView;
     [alertView show];
 	
