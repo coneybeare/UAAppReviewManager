@@ -41,7 +41,7 @@ static NSString * const kAppiraterReminderRequestDate       = @"kAppiraterRemind
 // The templates used for opening the app store directly
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 static NSString * const reviewURLTemplate                   = @"itms-apps://ax.itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?type=Purple+Software&id=APP_ID&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
-static NSString * const reviewURLTemplateiOS7               = @"itms-apps://itunes.apple.com/app/idAPP_ID?at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
+static NSString * const reviewURLTemplateiOS7				= @"itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?id=APP_ID&onlyLatestVersion=true&pageNumber=0&sortOrdering=1&type=Purple+Software&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
 #else
 static NSString * const reviewURLTemplate                   = @"macappstore://itunes.apple.com/us/app/thumbs/idAPP_ID?ls=1&mt=12&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
 #endif
@@ -812,7 +812,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 													   delegate:self
 											  cancelButtonTitle:self.cancelButtonTitle
 											  otherButtonTitles:self.remindButtonTitle, self.rateButtonTitle, nil];
-    alertView.cancelButtonIndex = -1;
+    alertView.cancelButtonIndex = 0;
 	self.ratingAlert = alertView;
     [alertView show];
 	
