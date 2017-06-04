@@ -18,7 +18,7 @@
 
 #define UAAppReviewManagerDebugLog( s, ... ) if (self.debugEnabled) { NSLog(@"[UAAppReviewManager] %@", [NSString stringWithFormat:(s), ##__VA_ARGS__]); }
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS || TARGET_OS_TV
 #define UAAppReviewManagerSystemVersionEqualTo(v)               ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedSame)
 #define UAAppReviewManagerSystemVersionLessThan(v)              ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
 #define UAAppReviewManagerSystemVersionLessThanOrEqualTo(v)     ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedDescending)
@@ -39,11 +39,15 @@ static NSString * const kAppiraterDeclinedToRate            = @"kAppiraterDeclin
 static NSString * const kAppiraterReminderRequestDate       = @"kAppiraterReminderRequestDate";
 
 // The templates used for opening the app store directly
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 static NSString * const reviewURLTemplate                   = @"itms-apps://ax.itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?type=Purple+Software&id=APP_ID&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
 static NSString * const reviewURLTemplateiOS7               = @"itms-apps://itunes.apple.com/WebObjects/MZStore.woa/wa/viewContentsUserReviews?type=Purple+Software&onlyLatestVersion=true&pageNumber=0&sortOrdering=1&id=APP_ID&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
-#else
+#elif TARGET_OS_TV
+static NSString * const reviewURLTemplate                   = @"com.apple.TVAppStore://itunes.apple.com/us/app/thumbs/idAPP_ID?ls=1&mt=12&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
+#elif TARGET_OS_OSX
 static NSString * const reviewURLTemplate                   = @"macappstore://itunes.apple.com/us/app/thumbs/idAPP_ID?ls=1&mt=12&at=AFFILIATE_CODE&ct=AFFILIATE_CAMPAIGN_CODE";
+#else
+#error Unknown platform
 #endif
 
 @interface UAAppReviewManager ()
@@ -68,7 +72,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 @property (nonatomic, strong) NSString          *affiliateCode;
 @property (nonatomic, strong) NSString          *affiliateCampaignCode;
 @property (nonatomic, assign) BOOL              debugEnabled;
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 @property (nonatomic, assign) BOOL              usesAnimation;
 @property (nonatomic, assign) BOOL              opensInStoreKit;
 #endif
@@ -96,7 +100,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 @property (nonatomic, copy) UAAppReviewManagerBlock				didDeclineToRateBlock;
 @property (nonatomic, copy) UAAppReviewManagerBlock				didOptToRateBlock;
 @property (nonatomic, copy) UAAppReviewManagerBlock				didOptToRemindLaterBlock;
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 @property (nonatomic, copy) UAAppReviewManagerAnimateBlock		willPresentModalViewBlock;
 @property (nonatomic, copy) UAAppReviewManagerAnimateBlock		didDismissModalViewBlock;
 #endif
@@ -105,7 +109,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 
 // State ivars
 @property (nonatomic, assign) BOOL modalPanelOpen;
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 @property (nonatomic, assign) UIStatusBarStyle	currentStatusBarStyle;
 #endif
 @end
@@ -277,7 +281,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 #endif
 }
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 + (BOOL)usesAnimation {
 	return [[UAAppReviewManager defaultManager] usesAnimation];
 }
@@ -336,7 +340,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 	[[UAAppReviewManager defaultManager] rateApp];
 }
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 + (void)closeModalPanel {
 	[[UAAppReviewManager defaultManager] closeModalPanel];
 }
@@ -358,7 +362,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 	[[UAAppReviewManager defaultManager] setDidOptToRemindLaterBlock:didOptToRemindLaterBlock];
 }
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 + (void)setOnWillPresentModalView:(UAAppReviewManagerAnimateBlock)willPresentModalViewBlock {
 	[[UAAppReviewManager defaultManager] setWillPresentModalViewBlock:willPresentModalViewBlock];
 }
@@ -414,7 +418,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 	// No analagous method
 }
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 + (void)setOpenInAppStore:(BOOL)openInAppStore {
 	[UAAppReviewManager setOpensInStoreKit:!openInAppStore];
 }
@@ -825,7 +829,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
     return [[self.userDefaultsObject objectForKey:[self keyForUAAppReviewManagerKeyType:UAAppReviewManagerKeyRatedCurrentVersion]] boolValue];
 }
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 - (void)showRatingAlert {
 	UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:self.reviewTitle
 														message:self.reviewMessage
@@ -842,7 +846,59 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 		self.didDisplayAlertBlock();
 }
 
-#else
+#elif TARGET_OS_TV
+
+- (void)showRatingAlert
+{
+	UIAlertAction *rateButtonAction = nil;
+	UIAlertAction *remindButtonAction = nil;
+	UIAlertAction *cancelButtonAction = nil;
+	
+	// setup the alert controller so the alert can be shown
+	self.ratingAlertController = [UIAlertController alertControllerWithTitle:self.reviewTitle
+																	 message:self.reviewMessage
+															  preferredStyle:UIAlertControllerStyleAlert];
+ 
+	// setup the buttons + actions
+	remindButtonAction = [UIAlertAction actionWithTitle:self.remindButtonTitle
+													 style:UIAlertActionStyleDefault
+												handler:^(UIAlertAction * action) {
+													[self remindMeLater];
+												}];
+	
+	rateButtonAction = [UIAlertAction actionWithTitle:self.rateButtonTitle
+												style:UIAlertActionStyleDefault
+													 handler:^(UIAlertAction * action) {
+														 [self _rateApp];
+													 }];
+	
+	cancelButtonAction = [UIAlertAction actionWithTitle:self.cancelButtonTitle
+												  style:UIAlertActionStyleCancel
+												handler:^(UIAlertAction * action) {
+													[self dontRate];
+												}];
+	
+	// decide which order to show the buttons
+	if (self.showsRemindButton == YES)
+	{
+		[self.ratingAlertController addAction:remindButtonAction];
+	}
+	
+	[self.ratingAlertController addAction:rateButtonAction];
+	self.ratingAlertController.preferredAction = rateButtonAction;
+	
+	[self.ratingAlertController addAction:cancelButtonAction];
+
+	// show the alert view controller
+	[[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:self.ratingAlertController
+																					animated:YES
+																				  completion:nil];
+	
+	if (self.didDisplayAlertBlock)
+		self.didDisplayAlertBlock();
+}
+
+#elif TARGET_OS_OSX
 
 - (void)showRatingAlert {
 	NSAlert *alert = [NSAlert alertWithMessageText:self.reviewTitle
@@ -867,11 +923,13 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 		self.didDisplayAlertBlock();
 }
 
+#else
+#error Invalid platform
 #endif
 
 #pragma mark PRIVATE Alert View Delegate Methods
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 
 - (void)alertView:(UIAlertView *)alertView didDismissWithButtonIndex:(NSInteger)buttonIndex {
     
@@ -913,7 +971,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 	}
 }
 
-#else
+#elif TARGET_OS_OSX
 
 - (void)handleNSAlertReturnCode:(NSInteger)returnCode {
 	switch (returnCode) {
@@ -969,7 +1027,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 	[self.userDefaultsObject setObject:[NSNumber numberWithBool:YES] forKey:[self keyForUAAppReviewManagerKeyType:UAAppReviewManagerKeyRatedAnyVersion]];
 	[self.userDefaultsObject synchronize];
 	
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 	//Use the in-app StoreKit view if set, available (iOS 6) and imported This works in the simulator.
 	if (self.opensInStoreKit && NSStringFromClass([SKStoreProductViewController class]) != nil) {
         
@@ -994,7 +1052,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 			}
 #else
 			[[UIApplication sharedApplication]setStatusBarStyle:UIStatusBarStyleBlackOpaque animated:self.usesAnimation];
-#endif
+#endif // __IPHONE_OS_VERSION_MAX_ALLOWED
 			
 		}];
         
@@ -1008,18 +1066,21 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 		NSLog(@"... You can try by copy/pasting %@ into a browser on your computer.", fakeURL);
 #else
 		[[UIApplication sharedApplication] openURL:[NSURL URLWithString:[self reviewURLString]]];
-#endif
+#endif // TARGET_IPHONE_SIMULATOR
 	}
-    
-#else
-	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:[self reviewURLString]]];
-#endif
 	
+#elif TARGET_OS_TV
+	[[UIApplication sharedApplication] openURL:[NSURL URLWithString:[self reviewURLString]]];
+#elif TARGET_OS_OSX
+	[[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:[self reviewURLString]]];
+#else
+#error Invalid platform
+#endif
 }
 
 - (NSString *)reviewURLString {
 	NSString *template = reviewURLTemplate;
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 	if (UAAppReviewManagerSystemVersionGreaterThanOrEqualTo(@"7.0")) {
 		template = reviewURLTemplateiOS7;
 	}
@@ -1029,8 +1090,6 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 	reviewURL = [reviewURL stringByReplacingOccurrencesOfString:@"AFFILIATE_CAMPAIGN_CODE" withString:[NSString stringWithFormat:@"%@", self.affiliateCampaignCode]];
 	return reviewURL;
 }
-
-
 
 #pragma mark PRIVATE Key Helpers
 
@@ -1261,17 +1320,27 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 #endif
 
 - (void)hideRatingAlert {
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 	if (self.ratingAlert.visible) {
 		UAAppReviewManagerDebugLog(@"Hiding Alert");
 		[self.ratingAlert dismissWithClickedButtonIndex:-1 animated:NO];
-#else
+		self.ratingAlert = nil;
+	}
+#elif TARGET_OS_OSX
         if (self.ratingAlert) {
             UAAppReviewManagerDebugLog(@"Hiding Alert");
             [NSApp endSheet:[[NSApplication sharedApplication] keyWindow]];
+			self.ratingAlert = nil;
+		}
+#elif TARGET_OS_TV
+		if (self.ratingAlertController) {
+			UAAppReviewManagerDebugLog(@"Hiding Alert");
+			[self.ratingAlertController dismissViewControllerAnimated:YES completion:^{}];
+			self.ratingAlertController = nil;
+		}
+#else
+#error Invalid Platform
 #endif
-        self.ratingAlert = nil;
-    }
 }
 
 - (NSString *)defaultAffiliateCode {
@@ -1356,7 +1425,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
     self.affiliateCampaignCode = self.defaultAffiliateCode;
     self.keyPrefix = nil; // gets set as AppName
     self.userDefaultsObject = (NSObject<UAAppReviewManagerDefaultsObject> *)[NSUserDefaults standardUserDefaults];
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
     self.usesAnimation = YES;
     self.opensInStoreKit = NO;
 #endif

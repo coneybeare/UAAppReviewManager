@@ -11,7 +11,6 @@
 #import <Foundation/Foundation.h>
 #import <StoreKit/StoreKit.h>
 
-
 //! Project version number for UAAppReviewManager.
 FOUNDATION_EXPORT double UAAppReviewManagerVersionNumber;
 
@@ -49,20 +48,29 @@ typedef BOOL (^UAAppReviewManagerShouldIncrementBlock)(void);
 - (BOOL)synchronize;
 @end
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 
 // iOS Interface
 @interface UAAppReviewManager : NSObject <UIAlertViewDelegate, SKStoreProductViewControllerDelegate>
 
 @property (nonatomic, strong) UIAlertView *ratingAlert;
 
-#else
+#elif TARGET_OS_TV
 
-// OS X
+// tvOS Interface
+@interface UAAppReviewManager : NSObject
+
+@property (nonatomic, strong) UIAlertController *ratingAlertController;
+
+#elif TARGET_OS_OSX
+
+// macOS Interface
 @interface UAAppReviewManager : NSObject <NSAlertDelegate>
 
 @property(nonatomic, strong) NSAlert *ratingAlert;
 
+#else
+#error Undefined platform
 #endif
 
 /*
@@ -245,7 +253,7 @@ typedef BOOL (^UAAppReviewManagerShouldIncrementBlock)(void);
 + (void)setDebug:(BOOL)debug;
 
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 /*
  * Set whether or not UAAppReviewManager uses animation when pushing modal StoreKit
  * view controllers for the app.
@@ -448,7 +456,7 @@ typedef BOOL (^UAAppReviewManagerShouldIncrementBlock)(void);
  */
 + (void)rateApp;
 
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 /*
  * Tells UAAppReviewManager to immediately close any open rating modals
  * for instance, a StoreKit rating View Controller.
@@ -464,7 +472,7 @@ typedef BOOL (^UAAppReviewManagerShouldIncrementBlock)(void);
 + (void)setOnDeclineToRate:(UAAppReviewManagerBlock)didDeclineToRateBlock;
 + (void)setOnDidOptToRate:(UAAppReviewManagerBlock)didOptToRateBlock;
 + (void)setOnDidOptToRemindLater:(UAAppReviewManagerBlock)didOptToRemindLaterBlock;
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 + (void)setOnWillPresentModalView:(UAAppReviewManagerAnimateBlock)willPresentModalViewBlock;
 + (void)setOnDidDismissModalView:(UAAppReviewManagerAnimateBlock)didDismissModalViewBlock;
 #endif
@@ -499,7 +507,7 @@ typedef BOOL (^UAAppReviewManagerShouldIncrementBlock)(void);
 + (void)setAlwaysUseMainBundle:(BOOL)useMainBundle __attribute__((deprecated("Use setUseMainAppBundleForLocalizations:")));
 + (void)appLaunched __attribute__((deprecated("Use appLaunched: instead")));
 + (void)setDelegate:(id)delegate __attribute__((deprecated("Use the block-based callbacks instead")));
-#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
+#if TARGET_OS_IOS
 + (void)setOpenInAppStore:(BOOL)openInAppStore __attribute__((deprecated("Use setOpensInStoreKit:")));
 #endif
 @end
