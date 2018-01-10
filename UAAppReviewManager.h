@@ -8,10 +8,13 @@
 //
 
 
-#import <Cocoa/Cocoa.h>
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 #import <Foundation/Foundation.h>
-#import <StoreKit/StoreKit.h>
+#else
+#import <Cocoa/Cocoa.h>
+#endif
 
+#import <StoreKit/StoreKit.h>
 
 //! Project version number for UAAppReviewManager.
 FOUNDATION_EXPORT double UAAppReviewManagerVersionNumber;
