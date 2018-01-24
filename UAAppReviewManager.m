@@ -836,6 +836,7 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 - (void)showRatingAlert {
     if (UAAppReviewManagerSystemVersionGreaterThanOrEqualTo(@"10.3")) {
         [SKStoreReviewController requestReview];
+        [self remindMeLater];
     }
     else {
         UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:self.reviewTitle
@@ -848,42 +849,38 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
         alertView.cancelButtonIndex = -1;
         self.ratingAlert = alertView;
         [alertView show];
-
-        if (self.didDisplayAlertBlock)
-            self.didDisplayAlertBlock();
+    }
+    
+    if (self.didDisplayAlertBlock) {
+        self.didDisplayAlertBlock();
     }
 }
 
 #else
 
 - (void)showRatingAlert {
-    if (UAAppReviewManagerSystemVersionGreaterThanOrEqualTo(@"10.3")) {
-        [SKStoreReviewController requestReview];
+    NSAlert *alert = [NSAlert new];
+    alert.messageText = self.reviewTitle;
+    alert.informativeText = self.reviewMessage;
+    [alert addButtonWithTitle:self.rateButtonTitle];
+    [alert addButtonWithTitle:self.remindButtonTitle];
+    [alert addButtonWithTitle:self.cancelButtonTitle];
+    self.ratingAlert = alert;
+    
+    NSWindow *window = [[NSApplication sharedApplication] keyWindow];
+    if (window) {
+        // TODO: Deprecated function
+        [alert beginSheetModalForWindow:[[NSApplication sharedApplication] keyWindow]
+                          modalDelegate:self
+                         didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
+                            contextInfo:nil];
+    } else {
+        NSInteger returnCode = [alert runModal];
+        [self handleNSAlertReturnCode:returnCode];
     }
-    else {
-        NSAlert *alert = [NSAlert new];
-        alert.messageText = self.reviewTitle;
-        alert.informativeText = self.reviewMessage;
-        [alert addButtonWithTitle:self.rateButtonTitle];
-        [alert addButtonWithTitle:self.remindButtonTitle];
-        [alert addButtonWithTitle:self.cancelButtonTitle];
-        self.ratingAlert = alert;
-        
-        NSWindow *window = [[NSApplication sharedApplication] keyWindow];
-        if (window) {
-            // TODO: Deprecated function
-            [alert beginSheetModalForWindow:[[NSApplication sharedApplication] keyWindow]
-                              modalDelegate:self
-                             didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
-                                contextInfo:nil];
-        } else {
-            NSInteger returnCode = [alert runModal];
-            [self handleNSAlertReturnCode:returnCode];
-        }
-        
-        if (self.didDisplayAlertBlock)
-            self.didDisplayAlertBlock();
-    }
+    
+    if (self.didDisplayAlertBlock)
+        self.didDisplayAlertBlock();
 }
 
 #endif
