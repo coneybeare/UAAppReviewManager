@@ -10,6 +10,7 @@
 
 #import "UAAppReviewManager.h"
 #import <SystemConfiguration/SCNetworkReachability.h>
+#import <StoreKit/StoreKit.h>
 #include <netinet/in.h>
 
 #if ! __has_feature(objc_arc)
@@ -833,46 +834,53 @@ static NSString * const reviewURLTemplate                   = @"macappstore://it
 
 #if defined(__IPHONE_OS_VERSION_MIN_REQUIRED)
 - (void)showRatingAlert {
-	UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:self.reviewTitle
-														message:self.reviewMessage
-													   delegate:self
-											  cancelButtonTitle:self.cancelButtonTitle
-											  otherButtonTitles:(self.showsRemindButton ? self.remindButtonTitle : self.rateButtonTitle),   // If we have a remind button, show it first. Otherwise show the rate button
-                                                                (self.showsRemindButton ? self.rateButtonTitle : nil),                      // If we have a remind button, show the rate button next. Otherwise stop adding buttons.
-                                                                nil];
-    alertView.cancelButtonIndex = -1;
-	self.ratingAlert = alertView;
-    [alertView show];
-
-    if (self.didDisplayAlertBlock)
-		self.didDisplayAlertBlock();
+    if (UAAppReviewManagerSystemVersionGreaterThanOrEqualTo(@"10.3")) {
+        [SKStoreReviewController requestReview];
+        [self remindMeLater];
+    }
+    else {
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:self.reviewTitle
+                                                            message:self.reviewMessage
+                                                           delegate:self
+                                                  cancelButtonTitle:self.cancelButtonTitle
+                                                  otherButtonTitles:(self.showsRemindButton ? self.remindButtonTitle : self.rateButtonTitle),   // If we have a remind button, show it first. Otherwise show the rate button
+                                                                    (self.showsRemindButton ? self.rateButtonTitle : nil),                      // If we have a remind button, show the rate button next. Otherwise stop adding buttons.
+                                                                    nil];
+        alertView.cancelButtonIndex = -1;
+        self.ratingAlert = alertView;
+        [alertView show];
+    }
+    
+    if (self.didDisplayAlertBlock) {
+        self.didDisplayAlertBlock();
+    }
 }
 
 #else
 
 - (void)showRatingAlert {
-	NSAlert *alert = [NSAlert new];
-	alert.messageText = self.reviewTitle;
-	alert.informativeText = self.reviewMessage;
-	[alert addButtonWithTitle:self.rateButtonTitle];
-	[alert addButtonWithTitle:self.remindButtonTitle];
-	[alert addButtonWithTitle:self.cancelButtonTitle];
-	self.ratingAlert = alert;
-
-	NSWindow *window = [[NSApplication sharedApplication] keyWindow];
-	if (window) {
-	    // TODO: Deprecated function
-		[alert beginSheetModalForWindow:[[NSApplication sharedApplication] keyWindow]
-						  modalDelegate:self
-						 didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
-							contextInfo:nil];
-	} else {
-		NSInteger returnCode = [alert runModal];
-		[self handleNSAlertReturnCode:returnCode];
-	}
-
-	if (self.didDisplayAlertBlock)
-		self.didDisplayAlertBlock();
+    NSAlert *alert = [NSAlert new];
+    alert.messageText = self.reviewTitle;
+    alert.informativeText = self.reviewMessage;
+    [alert addButtonWithTitle:self.rateButtonTitle];
+    [alert addButtonWithTitle:self.remindButtonTitle];
+    [alert addButtonWithTitle:self.cancelButtonTitle];
+    self.ratingAlert = alert;
+    
+    NSWindow *window = [[NSApplication sharedApplication] keyWindow];
+    if (window) {
+        // TODO: Deprecated function
+        [alert beginSheetModalForWindow:[[NSApplication sharedApplication] keyWindow]
+                          modalDelegate:self
+                         didEndSelector:@selector(alertDidEnd:returnCode:contextInfo:)
+                            contextInfo:nil];
+    } else {
+        NSInteger returnCode = [alert runModal];
+        [self handleNSAlertReturnCode:returnCode];
+    }
+    
+    if (self.didDisplayAlertBlock)
+        self.didDisplayAlertBlock();
 }
 
 #endif
